@@ -20,6 +20,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          path: luci-app-quick-action
 
       - name: Install dependencies
         run: |
@@ -32,42 +34,48 @@ jobs:
         id: cache-sdk
         with:
           path: ${{ env.SDK_NAME }}
-          key: ${{ env.SDK_NAME }}
+          key: ${{ env.SDK_NAME }}-v2
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
         run: |
           wget -q ${{ env.SDK_URL }}
           tar -xf $(basename ${{ env.SDK_URL }})
+          cd ${{ env.SDK_NAME }}
+          # Update feeds to create directory structure
+          ./scripts/feeds update -a
 
       - name: Build IPK
         run: |
           cd ${{ env.SDK_NAME }}
 
-          # Copy package to feeds
+          # Copy package source to SDK feeds (create dir if not exists)
           mkdir -p feeds/luci/applications/luci-app-quick-action
-          cp -r $GITHUB_WORKSPACE/* feeds/luci/applications/luci-app-quick-action/
+          cp -r $GITHUB_WORKSPACE/luci-app-quick-action/* feeds/luci/applications/luci-app-quick-action/
 
-          # Update feeds
+          # Update feeds index
           ./scripts/feeds update -i
           ./scripts/feeds install -f luci-app-quick-action
 
           # Build
           make package/luci-app-quick-action/compile V=s
 
-          # Find and copy artifacts
-          find bin/packages -name "luci-app-quick-action*.ipk" -exec cp {} $GITHUB_WORKSPACE/ \;
+      - name: Collect artifacts
+        run: |
+          mkdir -p artifacts
+          find ${{ env.SDK_NAME }}/bin/packages -name "luci-*quick-action*.ipk" -exec cp {} artifacts/ \;
+          ls -la artifacts/
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: luci-app-quick-action-ipk
-          path: "*.ipk"
+          path: artifacts/*.ipk
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v1
         with:
-          files: "*.ipk"
+          files: artifacts/*.ipk
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
