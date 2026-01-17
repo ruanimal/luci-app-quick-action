@@ -17,5 +17,4 @@ define Package/luci-app-quick-action/conffiles
 /etc/config/quick_action
 endef
 
-# call BuildPackage - OpenWrt buildroot makeance
-$(eval $(call BuildPackage,luci-app-quick-action))
+# call BuildPackage - OpenWrt buildroot signature

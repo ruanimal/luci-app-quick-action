@@ -36,4 +36,4 @@ sudo apt install -y \
 ./scripts/feeds install -f luci-app-quick-action
 
 # 编译
-make package/luci-app-quick-action/compile V=s
+make -j8 package/luci-app-quick-action/compile V=s

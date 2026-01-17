@@ -1,0 +1,100 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: zh_Hans\n"
+
+msgid "Quick Action"
+msgstr "快捷操作"
+
+msgid "Configure quick action commands and manage access tokens for HTTP API."
+msgstr "配置快捷操作命令和管理 HTTP API 访问令牌。"
+
+msgid "Global Settings"
+msgstr "全局设置"
+
+msgid "Enable Quick Action"
+msgstr "启用快捷操作"
+
+msgid "Commands"
+msgstr "命令"
+
+msgid "Define commands that can be executed via HTTP API. Supports shell commands and ubus calls."
+msgstr "定义可通过 HTTP API 执行的命令。支持 Shell 命令和 ubus 调用。"
+
+msgid "Name"
+msgstr "名称"
+
+msgid "Name is required"
+msgstr "名称为必填项"
+
+msgid "Name must start with a letter or underscore, and contain only letters, numbers, and underscores"
+msgstr "名称必须以字母或下划线开头，并且只能包含字母、数字和下划线"
+
+msgid "Description"
+msgstr "描述"
+
+msgid "Optional description"
+msgstr "可选的描述信息"
+
+msgid "Type"
+msgstr "类型"
+
+msgid "Shell Command"
+msgstr "Shell 命令"
+
+msgid "ubus Call"
+msgstr "ubus 调用"
+
+msgid "ubus Object"
+msgstr "ubus 对象"
+
+msgid "ubus Method"
+msgstr "ubus 方法"
+
+msgid "ubus Params (JSON)"
+msgstr "ubus 参数 (JSON)"
+
+msgid "Enabled"
+msgstr "启用"
+
+msgid "API Tokens"
+msgstr "API 令牌"
+
+msgid "Manage tokens for HTTP API authentication. Tokens can be passed via URL parameter (?token=xxx) or Header (X-Quick-Action-Token)."
+msgstr "管理 HTTP API 认证令牌。令牌可以通过 URL 参数 (?token=xxx) 或请求头 (Authorization: Bearer xxx) 传递。"
+
+msgid "Token"
+msgstr "令牌"
+
+msgid "Token is required"
+msgstr "令牌为必填项"
+
+msgid "Token must be at least 8 characters"
+msgstr "令牌至少需要 8 个字符"
+
+msgid "Token can only contain letters, numbers, underscores and hyphens"
+msgstr "令牌只能包含字母、数字、下划线和连字符"
+
+msgid "Auto-generate or enter manually"
+msgstr "自动生成或手动输入"
+
+msgid "Generate"
+msgstr "生成"
+
+msgid "Token generated and filled. Please save the configuration."
+msgstr "令牌已生成并填入。请保存配置。"
+
+msgid "Token generated: %s"
+msgstr "令牌已生成：%s"
+
+msgid "Remark"
+msgstr "备注"
+
+msgid "Expires (Unix timestamp)"
+msgstr "过期时间 (Unix 时间戳)"
+
+msgid "0 = never expires"
+msgstr "0 = 永不过期"
+
+msgid "API Usage"
+msgstr "API 使用说明"

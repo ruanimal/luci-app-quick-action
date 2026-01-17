@@ -62,7 +62,7 @@ return view.extend({
 
 		o = s.option(form.Value, 'name', _('Name'));
 		o.rmempty = false;
-		o.placeholder = 'restart_wan';
+		o.placeholder = 'my_command';
 		o.datatype = 'uciname';
 		o.validate = function (section_id, value) {
 			if (!value || value.length === 0)
@@ -73,7 +73,7 @@ return view.extend({
 		};
 
 		o = s.option(form.Value, 'description', _('Description'));
-		o.placeholder = _('Restart WAN interface');
+		o.placeholder = _('Optional description');
 
 		o = s.option(form.ListValue, 'type', _('Type'));
 		o.value('shell', _('Shell Command'));
@@ -82,22 +82,22 @@ return view.extend({
 		o.rmempty = false;
 
 		o = s.option(form.Value, 'exec', _('Shell Command'));
-		o.placeholder = '/sbin/ifdown wan && /sbin/ifup wan';
+		o.placeholder = 'echo hello';
 		o.depends('type', 'shell');
 		o.rmempty = true;
 
 		o = s.option(form.Value, 'ubus_object', _('ubus Object'));
-		o.placeholder = 'network.interface.wan';
+		o.placeholder = 'system';
 		o.depends('type', 'ubus');
 		o.rmempty = true;
 
 		o = s.option(form.Value, 'ubus_method', _('ubus Method'));
-		o.placeholder = 'status';
+		o.placeholder = 'board';
 		o.depends('type', 'ubus');
 		o.rmempty = true;
 
 		o = s.option(form.Value, 'ubus_params', _('ubus Params (JSON)'));
-		o.placeholder = '{"key": "value"}';
+		o.placeholder = '{}';
 		o.depends('type', 'ubus');
 		o.rmempty = true;
 
