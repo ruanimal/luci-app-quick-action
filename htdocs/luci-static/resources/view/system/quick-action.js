@@ -134,6 +134,7 @@ return view.extend({
 		o = s.option(form.Button, '_generate', _('Generate'));
 		o.inputtitle = _('Generate');
 		o.inputstyle = 'apply';
+		o.modalonly = true;  // 仅在编辑模态框中显示，表格中不显示
 		o.onclick = function (ev, section_id) {
 			var newToken = generateToken();
 

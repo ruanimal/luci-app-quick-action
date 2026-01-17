@@ -1,14 +1,38 @@
 #!/bin/sh
 
-# Initialize quick_action config if not exists
-if [ ! -f /etc/config/quick_action ]; then
-	touch /etc/config/quick_action
+# Initialize quick_action config if not exists or empty
+if [ ! -s /etc/config/quick_action ]; then
+	# Create config file with default configuration
+	cat > /etc/config/quick_action <<-'EOF'
+config quick_action 'global'
+	option enabled '1'
 
-	uci -q batch <<-EOF
-		set quick_action.global=quick_action
-		set quick_action.global.enabled='1'
-		commit quick_action
-	EOF
+# Shell 命令示例
+config command 'example_restart_wan'
+	option name 'restart_wan'
+	option description 'Restart WAN interface'
+	option type 'shell'
+	option exec '/sbin/ifdown wan && /sbin/ifup wan'
+	option enabled '0'
+
+# ubus 命令示例
+config command 'example_ubus_network'
+	option name 'network_status'
+	option description 'Get network interface status'
+	option type 'ubus'
+	option ubus_object 'network.interface.wan'
+	option ubus_method 'status'
+	option enabled '0'
+
+# ubus 命令示例（带参数）
+config command 'example_ubus_system'
+	option name 'system_board'
+	option description 'Get system board info'
+	option type 'ubus'
+	option ubus_object 'system'
+	option ubus_method 'board'
+	option enabled '0'
+EOF
 fi
 
 exit 0
