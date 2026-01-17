@@ -1,9 +1,13 @@
 #!/bin/sh
 
-SDK_PATH=~/projects/openwrt-sdk-23.05.4-x86-64_gcc-12.3.0_musl.Linux-x86_64
+# 加载环境变量
+SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+if [ -f "$SCRIPT_DIR/.env" ]; then
+    . "$SCRIPT_DIR/.env"
+fi
 
 # 同步源码到 feeds/luci/applications/
-rsync -a --delete ~/projects/luci-app-quick-action/ $SDK_PATH/feeds/luci/applications/luci-app-quick-action/
+rsync -a --delete $SCRIPT_DIR/ $SDK_PATH/feeds/luci/applications/luci-app-quick-action/
 
 cd $SDK_PATH
 
