@@ -13,6 +13,28 @@ function generateToken() {
 	return token;
 }
 
+function getApiUsageHtml() {
+	var host = window.location.hostname;
+	return [
+		'<h4>HTTP API Endpoints</h4>',
+		'<p><strong>List Commands: </strong><code>GET /cgi-bin/quick_action?action=list&amp;token=YOUR_TOKEN</code></p>',
+		'<p><strong>Run Command: </strong><code>GET /cgi-bin/quick_action?action=run&amp;cmd=COMMAND_NAME&amp;token=YOUR_TOKEN</code></p>',
+		'<h4>Header Authentication</h4>',
+		'<p><code>X-Quick-Action-Token: YOUR_TOKEN</code></p>',
+		'<h4>Example (curl)</h4>',
+		'<pre style="background:#f5f5f5;padding:10px;border-radius:4px">',
+		'# List commands',
+		'curl "http://' + host + '/cgi-bin/quick_action?action=list&token=YOUR_TOKEN"',
+		'',
+		'# Run command',
+		'curl "http://' + host + '/cgi-bin/quick_action?action=run&cmd=restart_wan&token=YOUR_TOKEN"',
+		'',
+		'# With header',
+		'curl -H "X-Quick-Action-Token: YOUR_TOKEN" "http://' + host + '/cgi-bin/quick_action?action=list"',
+		'</pre>'
+	].join('\n');
+}
+
 return view.extend({
 	load: function () {
 		return uci.load('quick_action');
@@ -154,35 +176,7 @@ return view.extend({
 
 		o = s.option(form.DummyValue, '_api_info');
 		o.rawhtml = true;
-		o.cfgvalue = function () {
-			var host = window.location.hostname;
-			return E('div', { 'class': 'cbi-value-description' }, [
-				E('h4', _('HTTP API Endpoints')),
-				E('p', [
-					E('strong', _('List Commands: ')),
-					E('code', 'GET /cgi-bin/quick_action?action=list&token=YOUR_TOKEN')
-				]),
-				E('p', [
-					E('strong', _('Run Command: ')),
-					E('code', 'GET /cgi-bin/quick_action?action=run&cmd=COMMAND_ID&token=YOUR_TOKEN')
-				]),
-				E('h4', _('Header Authentication')),
-				E('p', [
-					E('code', 'X-Quick-Action-Token: YOUR_TOKEN')
-				]),
-				E('h4', _('Example (curl)')),
-				E('pre', { 'style': 'background: #f5f5f5; padding: 10px; border-radius: 4px;' }, [
-					'# List commands\n',
-					'curl "http://' + host + '/cgi-bin/quick_action?action=list&token=YOUR_TOKEN"\n\n',
-					'# Run shell command\n',
-					'curl "http://' + host + '/cgi-bin/quick_action?action=run&cmd=example_restart_wan&token=YOUR_TOKEN"\n\n',
-					'# Run ubus command\n',
-					'curl "http://' + host + '/cgi-bin/quick_action?action=run&cmd=example_ubus_network&token=YOUR_TOKEN"\n\n',
-					'# With header\n',
-					'curl -H "X-Quick-Action-Token: YOUR_TOKEN" "http://' + host + '/cgi-bin/quick_action?action=list"'
-				])
-			]);
-		};
+		o.cfgvalue = getApiUsageHtml;
 
 		return m.render();
 	}
