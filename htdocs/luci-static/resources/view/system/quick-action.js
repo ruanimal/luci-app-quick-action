@@ -99,6 +99,14 @@ return view.extend({
 		o = s.option(form.Value, 'name', _('Name'));
 		o.rmempty = false;
 		o.placeholder = 'restart_wan';
+		o.datatype = 'uciname';
+		o.validate = function (section_id, value) {
+			if (!value || value.length === 0)
+				return _('Name is required');
+			if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(value))
+				return _('Name must start with a letter or underscore, and contain only letters, numbers, and underscores');
+			return true;
+		};
 
 		o = s.option(form.Value, 'description', _('Description'));
 		o.placeholder = _('Restart WAN interface');

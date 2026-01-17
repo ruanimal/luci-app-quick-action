@@ -14,50 +14,6 @@
 - ✅ Token 支持 URL 参数和 Header 两种传递方式
 - ✅ Token 支持设置过期时间
 
-## 编译安装
-
-### 方式一：使用 OpenWrt SDK
-
-```bash
-# 1. 下载并解压 OpenWrt SDK
-# 2. 将本项目拷贝到 package 目录
-cp -r luci-app-quick-action /path/to/openwrt-sdk/package/
-
-# 3. 更新 feeds
-cd /path/to/openwrt-sdk
-./scripts/feeds update -a
-./scripts/feeds install -a
-
-# 4. 编译
-make package/luci-app-quick-action/compile V=s
-
-# 5. 生成的 ipk 文件位于
-# bin/packages/<arch>/base/luci-app-quick-action_*.ipk
-```
-
-### 方式二：集成到 OpenWrt 源码
-
-```bash
-# 将本项目拷贝到源码的 package 目录
-cp -r luci-app-quick-action /path/to/openwrt/package/
-
-# 在 menuconfig 中选择
-# LuCI -> Applications -> luci-app-quick-action
-
-make menuconfig
-make package/luci-app-quick-action/compile V=s
-```
-
-### 安装到路由器
-
-```bash
-# 将 ipk 文件传输到路由器
-scp luci-app-quick-action_*.ipk root@192.168.1.1:/tmp/
-
-# SSH 登录路由器安装
-ssh root@192.168.1.1
-opkg install /tmp/luci-app-quick-action_*.ipk
-```
 
 ## 使用方法
 
@@ -86,9 +42,9 @@ opkg install /tmp/luci-app-quick-action_*.ipk
 curl "http://192.168.1.1/cgi-bin/quick_action?action=list&token=YOUR_TOKEN"
 ```
 
-**执行命令：**
+**执行命令（使用命令名称）：**
 ```bash
-curl "http://192.168.1.1/cgi-bin/quick_action?action=run&cmd=COMMAND_ID&token=YOUR_TOKEN"
+curl "http://192.168.1.1/cgi-bin/quick_action?action=run&cmd=restart_wan&token=YOUR_TOKEN"
 ```
 
 **使用 Header 方式：**
@@ -188,7 +144,7 @@ config token 'token_xxx'
 ubus list
 
 # 查看对象的方法
-ubus list -v network.interface.wan
+ubus -v list network.interface.wan
 
 # 调用方法
 ubus call network.interface.wan status

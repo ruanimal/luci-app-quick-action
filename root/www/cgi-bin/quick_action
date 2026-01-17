@@ -99,11 +99,42 @@ list_commands() {
 	json_dump
 }
 
-# Run a command
+# Find command section by name
+find_command_by_name() {
+	local search_name="$1"
+	local found_section=""
+
+	find_section() {
+		local section="$1"
+		local name
+		config_get name "$section" name
+
+		if [ "$name" = "$search_name" ]; then
+			found_section="$section"
+		fi
+	}
+
+	config_foreach find_section command
+	echo "$found_section"
+}
+
+# Run a command by name
 run_command() {
-	local cmd_id="$1"
+	local cmd_name="$1"
 
 	config_load quick_action
+
+	# 通过 name 查找命令的 section ID
+	local cmd_id
+	cmd_id=$(find_command_by_name "$cmd_name")
+
+	if [ -z "$cmd_id" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command not found: $cmd_name"
+		json_dump
+		return 1
+	fi
 
 	local name type exec ubus_object ubus_method ubus_params enabled
 	config_get name "$cmd_id" name
@@ -113,14 +144,6 @@ run_command() {
 	config_get ubus_method "$cmd_id" ubus_method
 	config_get ubus_params "$cmd_id" ubus_params
 	config_get enabled "$cmd_id" enabled "1"
-
-	if [ -z "$name" ]; then
-		json_init
-		json_add_boolean "success" 0
-		json_add_string "error" "Command not found"
-		json_dump
-		return 1
-	fi
 
 	if [ "$enabled" != "1" ]; then
 		json_init

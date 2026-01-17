@@ -10,6 +10,25 @@ cd $SDK_PATH
 # 清理旧的安装链接
 rm -rf package/feeds/luci/luci-app-quick-action 2>/dev/null
 
+# 安装依赖
+sudo apt install -y \
+ build-essential \
+ clang \
+ flex \
+ bison \
+ gawk \
+ gettext \
+ libncurses-dev \
+ libssl-dev \
+ rsync \
+ unzip \
+ zlib1g-dev \
+ file \
+ wget \
+ libelf-dev \
+ ccache \
+ python3-distutils-extra
+
 # 更新 feeds 索引
 ./scripts/feeds update -i
 
