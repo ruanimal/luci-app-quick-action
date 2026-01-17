@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Initialize quick_action config if not exists
+if [ ! -f /etc/config/quick_action ]; then
+	touch /etc/config/quick_action
+
+	uci -q batch <<-EOF
+		set quick_action.global=quick_action
+		set quick_action.global.enabled='1'
+		commit quick_action
+	EOF
+fi
+
+exit 0

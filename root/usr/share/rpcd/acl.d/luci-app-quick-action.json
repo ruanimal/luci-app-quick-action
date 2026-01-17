@@ -1,0 +1,32 @@
+{
+	"luci-app-quick-action": {
+		"description": "Grant access to Quick Action configuration",
+		"read": {
+			"ubus": {
+				"luci.quick_action": [
+					"list_commands",
+					"get_command",
+					"list_tokens",
+					"validate_token"
+				]
+			},
+			"uci": [
+				"quick_action"
+			]
+		},
+		"write": {
+			"ubus": {
+				"luci.quick_action": [
+					"run_command",
+					"add_command",
+					"delete_command",
+					"add_token",
+					"delete_token"
+				]
+			},
+			"uci": [
+				"quick_action"
+			]
+		}
+	}
+}

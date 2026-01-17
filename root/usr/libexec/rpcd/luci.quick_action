@@ -1,0 +1,476 @@
+#!/bin/sh
+
+# rpcd plugin for luci-app-quick-action
+# Provides ubus interface for quick action commands
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+# Read token from stdin for call methods
+read_json_input() {
+	local input
+	read -r input
+	json_load "$input"
+}
+
+# Output JSON response
+json_output() {
+	echo "$1"
+}
+
+# List all configured commands
+list_commands() {
+	json_init
+	json_add_array "commands"
+
+	config_load quick_action
+
+	list_command() {
+		local section="$1"
+		local name description type exec ubus_object ubus_method ubus_params enabled
+
+		config_get name "$section" name
+		config_get description "$section" description
+		config_get type "$section" type "shell"
+		config_get exec "$section" exec
+		config_get ubus_object "$section" ubus_object
+		config_get ubus_method "$section" ubus_method
+		config_get ubus_params "$section" ubus_params
+		config_get enabled "$section" enabled "1"
+
+		if [ -n "$name" ]; then
+			json_add_object ""
+			json_add_string "id" "$section"
+			json_add_string "name" "$name"
+			json_add_string "description" "$description"
+			json_add_string "type" "$type"
+			if [ "$type" = "shell" ]; then
+				json_add_string "exec" "$exec"
+			else
+				json_add_string "ubus_object" "$ubus_object"
+				json_add_string "ubus_method" "$ubus_method"
+				json_add_string "ubus_params" "$ubus_params"
+			fi
+			json_add_boolean "enabled" "$enabled"
+			json_close_object
+		fi
+	}
+
+	config_foreach list_command command
+
+	json_close_array
+	json_dump
+}
+
+# Get a specific command
+get_command() {
+	local cmd_id="$1"
+
+	config_load quick_action
+
+	local name description type exec ubus_object ubus_method ubus_params enabled
+	config_get name "$cmd_id" name
+	config_get description "$cmd_id" description
+	config_get type "$cmd_id" type "shell"
+	config_get exec "$cmd_id" exec
+	config_get ubus_object "$cmd_id" ubus_object
+	config_get ubus_method "$cmd_id" ubus_method
+	config_get ubus_params "$cmd_id" ubus_params
+	config_get enabled "$cmd_id" enabled "1"
+
+	if [ -z "$name" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command not found"
+		json_dump
+		return 1
+	fi
+
+	json_init
+	json_add_boolean "success" 1
+	json_add_string "id" "$cmd_id"
+	json_add_string "name" "$name"
+	json_add_string "description" "$description"
+	json_add_string "type" "$type"
+	if [ "$type" = "shell" ]; then
+		json_add_string "exec" "$exec"
+	else
+		json_add_string "ubus_object" "$ubus_object"
+		json_add_string "ubus_method" "$ubus_method"
+		json_add_string "ubus_params" "$ubus_params"
+	fi
+	json_add_boolean "enabled" "$enabled"
+	json_dump
+}
+
+# Run a command by its ID
+run_command() {
+	local cmd_id="$1"
+
+	config_load quick_action
+
+	local name type exec ubus_object ubus_method ubus_params enabled
+	config_get name "$cmd_id" name
+	config_get type "$cmd_id" type "shell"
+	config_get exec "$cmd_id" exec
+	config_get ubus_object "$cmd_id" ubus_object
+	config_get ubus_method "$cmd_id" ubus_method
+	config_get ubus_params "$cmd_id" ubus_params
+	config_get enabled "$cmd_id" enabled "1"
+
+	if [ -z "$name" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command not found"
+		json_dump
+		return 1
+	fi
+
+	if [ "$enabled" != "1" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command is disabled"
+		json_dump
+		return 1
+	fi
+
+	# Execute the command based on type
+	local output ret
+
+	if [ "$type" = "ubus" ]; then
+		# Execute ubus call
+		if [ -z "$ubus_object" ] || [ -z "$ubus_method" ]; then
+			json_init
+			json_add_boolean "success" 0
+			json_add_string "error" "ubus_object and ubus_method are required for ubus type"
+			json_dump
+			return 1
+		fi
+
+		if [ -n "$ubus_params" ]; then
+			output=$(ubus call "$ubus_object" "$ubus_method" "$ubus_params" 2>&1)
+		else
+			output=$(ubus call "$ubus_object" "$ubus_method" 2>&1)
+		fi
+		ret=$?
+	else
+		# Execute shell command
+		output=$(eval "$exec" 2>&1)
+		ret=$?
+	fi
+
+	json_init
+	if [ $ret -eq 0 ]; then
+		json_add_boolean "success" 1
+		json_add_string "output" "$output"
+	else
+		json_add_boolean "success" 0
+		json_add_string "error" "Command execution failed"
+		json_add_string "output" "$output"
+		json_add_int "exit_code" "$ret"
+	fi
+	json_dump
+}
+
+# List all tokens
+list_tokens() {
+	json_init
+	json_add_array "tokens"
+
+	config_load quick_action
+
+	list_token() {
+		local section="$1"
+		local name token enabled expires
+
+		config_get name "$section" name
+		config_get token "$section" token
+		config_get enabled "$section" enabled "1"
+		config_get expires "$section" expires "0"
+
+		if [ -n "$token" ]; then
+			json_add_object ""
+			json_add_string "id" "$section"
+			json_add_string "name" "$name"
+			json_add_string "token" "$token"
+			json_add_boolean "enabled" "$enabled"
+			json_add_int "expires" "$expires"
+			json_close_object
+		fi
+	}
+
+	config_foreach list_token token
+
+	json_close_array
+	json_dump
+}
+
+# Add a new token
+add_token() {
+	local name="$1"
+	local token="$2"
+	local expires="${3:-0}"
+
+	if [ -z "$name" ] || [ -z "$token" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Name and token are required"
+		json_dump
+		return 1
+	fi
+
+	# Generate unique section name
+	local section_id="token_$(date +%s)"
+
+	uci -q batch <<-EOF
+		set quick_action.${section_id}=token
+		set quick_action.${section_id}.name='$name'
+		set quick_action.${section_id}.token='$token'
+		set quick_action.${section_id}.enabled='1'
+		set quick_action.${section_id}.expires='$expires'
+		commit quick_action
+	EOF
+
+	json_init
+	json_add_boolean "success" 1
+	json_add_string "id" "$section_id"
+	json_dump
+}
+
+# Delete a token
+delete_token() {
+	local token_id="$1"
+
+	if [ -z "$token_id" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Token ID is required"
+		json_dump
+		return 1
+	fi
+
+	config_load quick_action
+	local token
+	config_get token "$token_id" token
+
+	if [ -z "$token" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Token not found"
+		json_dump
+		return 1
+	fi
+
+	uci -q delete quick_action."$token_id"
+	uci -q commit quick_action
+
+	json_init
+	json_add_boolean "success" 1
+	json_dump
+}
+
+# Validate a token
+validate_token() {
+	local check_token="$1"
+	local valid=0
+
+	config_load quick_action
+
+	check_token_valid() {
+		local section="$1"
+		local token enabled expires
+
+		config_get token "$section" token
+		config_get enabled "$section" enabled "1"
+		config_get expires "$section" expires "0"
+
+		if [ "$token" = "$check_token" ] && [ "$enabled" = "1" ]; then
+			# Check expiration
+			if [ "$expires" = "0" ] || [ "$expires" -gt "$(date +%s)" ]; then
+				valid=1
+			fi
+		fi
+	}
+
+	config_foreach check_token_valid token
+
+	json_init
+	json_add_boolean "valid" "$valid"
+	json_dump
+}
+
+# Add a new command
+add_command() {
+	local name="$1"
+	local description="$2"
+	local type="$3"
+	local exec_cmd="$4"
+	local ubus_object="$5"
+	local ubus_method="$6"
+	local ubus_params="$7"
+
+	# Default type to shell
+	[ -z "$type" ] && type="shell"
+
+	if [ -z "$name" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Name is required"
+		json_dump
+		return 1
+	fi
+
+	if [ "$type" = "shell" ] && [ -z "$exec_cmd" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "exec is required for shell type"
+		json_dump
+		return 1
+	fi
+
+	if [ "$type" = "ubus" ] && { [ -z "$ubus_object" ] || [ -z "$ubus_method" ]; }; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "ubus_object and ubus_method are required for ubus type"
+		json_dump
+		return 1
+	fi
+
+	# Generate unique section name
+	local section_id="cmd_$(date +%s)"
+
+	uci -q batch <<-EOF
+		set quick_action.${section_id}=command
+		set quick_action.${section_id}.name='$name'
+		set quick_action.${section_id}.description='$description'
+		set quick_action.${section_id}.type='$type'
+		set quick_action.${section_id}.enabled='1'
+	EOF
+
+	if [ "$type" = "shell" ]; then
+		uci -q set quick_action.${section_id}.exec="$exec_cmd"
+	else
+		uci -q set quick_action.${section_id}.ubus_object="$ubus_object"
+		uci -q set quick_action.${section_id}.ubus_method="$ubus_method"
+		[ -n "$ubus_params" ] && uci -q set quick_action.${section_id}.ubus_params="$ubus_params"
+	fi
+
+	uci -q commit quick_action
+
+	json_init
+	json_add_boolean "success" 1
+	json_add_string "id" "$section_id"
+	json_dump
+}
+
+# Delete a command
+delete_command() {
+	local cmd_id="$1"
+
+	if [ -z "$cmd_id" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command ID is required"
+		json_dump
+		return 1
+	fi
+
+	config_load quick_action
+	local name
+	config_get name "$cmd_id" name
+
+	if [ -z "$name" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command not found"
+		json_dump
+		return 1
+	fi
+
+	uci -q delete quick_action."$cmd_id"
+	uci -q commit quick_action
+
+	json_init
+	json_add_boolean "success" 1
+	json_dump
+}
+
+# Main entry points for rpcd
+case "$1" in
+	list)
+		# Return available methods for rpcd discovery
+		cat <<-EOF
+		{
+			"list_commands": {},
+			"get_command": { "id": "str" },
+			"run_command": { "id": "str" },
+			"add_command": { "name": "str", "description": "str", "type": "str", "exec": "str", "ubus_object": "str", "ubus_method": "str", "ubus_params": "str" },
+			"delete_command": { "id": "str" },
+			"list_tokens": {},
+			"add_token": { "name": "str", "token": "str", "expires": 0 },
+			"delete_token": { "id": "str" },
+			"validate_token": { "token": "str" }
+		}
+		EOF
+		;;
+	call)
+		case "$2" in
+			list_commands)
+				list_commands
+				;;
+			get_command)
+				read_json_input
+				json_get_var cmd_id id
+				get_command "$cmd_id"
+				;;
+			run_command)
+				read_json_input
+				json_get_var cmd_id id
+				run_command "$cmd_id"
+				;;
+			add_command)
+				read_json_input
+				json_get_var name name
+				json_get_var description description
+				json_get_var type type
+				json_get_var exec_cmd exec
+				json_get_var ubus_object ubus_object
+				json_get_var ubus_method ubus_method
+				json_get_var ubus_params ubus_params
+				add_command "$name" "$description" "$type" "$exec_cmd" "$ubus_object" "$ubus_method" "$ubus_params"
+				;;
+			delete_command)
+				read_json_input
+				json_get_var cmd_id id
+				delete_command "$cmd_id"
+				;;
+			list_tokens)
+				list_tokens
+				;;
+			add_token)
+				read_json_input
+				json_get_var name name
+				json_get_var token token
+				json_get_var expires expires
+				add_token "$name" "$token" "$expires"
+				;;
+			delete_token)
+				read_json_input
+				json_get_var token_id id
+				delete_token "$token_id"
+				;;
+			validate_token)
+				read_json_input
+				json_get_var token token
+				validate_token "$token"
+				;;
+			*)
+				echo '{ "error": "Method not found" }'
+				;;
+		esac
+		;;
+	*)
+		echo '{ "error": "Invalid action" }'
+		exit 1
+		;;
+esac

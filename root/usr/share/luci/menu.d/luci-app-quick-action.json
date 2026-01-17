@@ -1,0 +1,18 @@
+{
+    "admin/system/quick-action": {
+        "title": "Quick Action",
+        "action": {
+            "type": "view",
+            "path": "system/quick-action"
+        },
+        "depends": {
+            "acl": [
+                "luci-app-quick-action"
+            ],
+            "uci": {
+                "quick_action": true
+            }
+        },
+        "order": 90
+    }
+}

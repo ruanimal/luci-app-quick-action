@@ -1,0 +1,215 @@
+#!/bin/sh
+
+# CGI script for Quick Action HTTP API with token authentication
+# Supports token via URL parameter (?token=xxx) or Header (X-Quick-Action-Token)
+
+. /lib/functions.sh
+. /usr/share/libubox/jshn.sh
+
+# Content-Type header
+echo "Content-Type: application/json"
+echo ""
+
+# Get token from URL parameter or Header
+get_token() {
+	local token=""
+
+	# Try URL parameter first
+	if [ -n "$QUERY_STRING" ]; then
+		token=$(echo "$QUERY_STRING" | sed -n 's/.*token=\([^&]*\).*/\1/p')
+	fi
+
+	# Try Header if not found in URL
+	if [ -z "$token" ] && [ -n "$HTTP_X_QUICK_ACTION_TOKEN" ]; then
+		token="$HTTP_X_QUICK_ACTION_TOKEN"
+	fi
+
+	echo "$token"
+}
+
+# Validate token
+validate_token() {
+	local check_token="$1"
+	local valid=0
+
+	if [ -z "$check_token" ]; then
+		return 1
+	fi
+
+	config_load quick_action
+
+	check_token_valid() {
+		local section="$1"
+		local token enabled expires
+
+		config_get token "$section" token
+		config_get enabled "$section" enabled "1"
+		config_get expires "$section" expires "0"
+
+		if [ "$token" = "$check_token" ] && [ "$enabled" = "1" ]; then
+			# Check expiration (0 = never expires)
+			if [ "$expires" = "0" ] || [ "$expires" -gt "$(date +%s)" ]; then
+				valid=1
+			fi
+		fi
+	}
+
+	config_foreach check_token_valid token
+
+	[ "$valid" = "1" ]
+}
+
+# Get parameter from query string
+get_param() {
+	local param_name="$1"
+	echo "$QUERY_STRING" | sed -n "s/.*${param_name}=\([^&]*\).*/\1/p" | sed 's/+/ /g' | sed 's/%\([0-9A-Fa-f][0-9A-Fa-f]\)/\\x\1/g' | xargs -0 printf "%b"
+}
+
+# List all commands
+list_commands() {
+	json_init
+	json_add_boolean "success" 1
+	json_add_array "commands"
+
+	config_load quick_action
+
+	list_command() {
+		local section="$1"
+		local name description type enabled
+
+		config_get name "$section" name
+		config_get description "$section" description
+		config_get type "$section" type "shell"
+		config_get enabled "$section" enabled "1"
+
+		if [ -n "$name" ]; then
+			json_add_object ""
+			json_add_string "id" "$section"
+			json_add_string "name" "$name"
+			json_add_string "description" "$description"
+			json_add_string "type" "$type"
+			json_add_boolean "enabled" "$enabled"
+			json_close_object
+		fi
+	}
+
+	config_foreach list_command command
+
+	json_close_array
+	json_dump
+}
+
+# Run a command
+run_command() {
+	local cmd_id="$1"
+
+	config_load quick_action
+
+	local name type exec ubus_object ubus_method ubus_params enabled
+	config_get name "$cmd_id" name
+	config_get type "$cmd_id" type "shell"
+	config_get exec "$cmd_id" exec
+	config_get ubus_object "$cmd_id" ubus_object
+	config_get ubus_method "$cmd_id" ubus_method
+	config_get ubus_params "$cmd_id" ubus_params
+	config_get enabled "$cmd_id" enabled "1"
+
+	if [ -z "$name" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command not found"
+		json_dump
+		return 1
+	fi
+
+	if [ "$enabled" != "1" ]; then
+		json_init
+		json_add_boolean "success" 0
+		json_add_string "error" "Command is disabled"
+		json_dump
+		return 1
+	fi
+
+	# Execute the command based on type
+	local output ret
+
+	if [ "$type" = "ubus" ]; then
+		# Execute ubus call
+		if [ -z "$ubus_object" ] || [ -z "$ubus_method" ]; then
+			json_init
+			json_add_boolean "success" 0
+			json_add_string "error" "ubus_object and ubus_method are required for ubus type"
+			json_dump
+			return 1
+		fi
+
+		if [ -n "$ubus_params" ]; then
+			output=$(ubus call "$ubus_object" "$ubus_method" "$ubus_params" 2>&1)
+		else
+			output=$(ubus call "$ubus_object" "$ubus_method" 2>&1)
+		fi
+		ret=$?
+	else
+		# Execute shell command
+		output=$(eval "$exec" 2>&1)
+		ret=$?
+	fi
+
+	json_init
+	if [ $ret -eq 0 ]; then
+		json_add_boolean "success" 1
+		json_add_string "message" "Command executed successfully"
+		json_add_string "output" "$output"
+	else
+		json_add_boolean "success" 0
+		json_add_string "error" "Command execution failed"
+		json_add_string "output" "$output"
+		json_add_int "exit_code" "$ret"
+	fi
+	json_dump
+}
+
+# Error response
+error_response() {
+	local message="$1"
+	json_init
+	json_add_boolean "success" 0
+	json_add_string "error" "$message"
+	json_dump
+}
+
+# Main logic
+main() {
+	# Get and validate token
+	local token
+	token=$(get_token)
+
+	if ! validate_token "$token"; then
+		error_response "Invalid or missing token"
+		exit 0
+	fi
+
+	# Get action parameter
+	local action
+	action=$(get_param "action")
+
+	case "$action" in
+		list)
+			list_commands
+			;;
+		run)
+			local cmd
+			cmd=$(get_param "cmd")
+			if [ -z "$cmd" ]; then
+				error_response "Missing 'cmd' parameter"
+			else
+				run_command "$cmd"
+			fi
+			;;
+		*)
+			error_response "Invalid action. Use 'list' or 'run'"
+			;;
+	esac
+}
+
+main

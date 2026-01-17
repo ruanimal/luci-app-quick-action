@@ -1,0 +1,28 @@
+config quick_action 'global'
+	option enabled '1'
+
+# Shell 命令示例
+config command 'example_restart_wan'
+	option name 'restart_wan'
+	option description '重启 WAN 接口'
+	option type 'shell'
+	option exec '/sbin/ifdown wan && /sbin/ifup wan'
+	option enabled '1'
+
+# ubus 命令示例
+config command 'example_ubus_network'
+	option name 'network_status'
+	option description '获取网络接口状态'
+	option type 'ubus'
+	option ubus_object 'network.interface.wan'
+	option ubus_method 'status'
+	option enabled '1'
+
+# ubus 命令示例（带参数）
+config command 'example_ubus_system'
+	option name 'system_board'
+	option description '获取系统信息'
+	option type 'ubus'
+	option ubus_object 'system'
+	option ubus_method 'board'
+	option enabled '1'
