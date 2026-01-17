@@ -10,5 +10,5 @@ IPK_NAME=$(basename "$IPK_FILE")
 # 通过 SSH 管道传输文件 (不需要 scp)
 cat "$IPK_FILE" | ssh root@192.168.10.1 "cat > /tmp/$IPK_NAME"
 
-# 安装
-ssh root@192.168.10.1 "opkg install /tmp/$IPK_NAME"
+# 覆盖安装
+ssh root@192.168.10.1 "opkg install --force-reinstall /tmp/$IPK_NAME"

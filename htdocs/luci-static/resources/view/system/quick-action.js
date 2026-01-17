@@ -208,14 +208,31 @@ return view.extend({
 		o.inputstyle = 'apply';
 		o.onclick = function (ev, section_id) {
 			var newToken = generateToken();
-			var tokenInput = document.querySelector('input[data-name="token"][data-section="%s"]'.format(section_id));
+
+			// 使用 LuCI 标准 input ID 格式定位 token 输入框
+			// ID 格式: widget.cbid.quick_action.{section_id}.token
+			var inputId = 'widget.cbid.quick_action.' + section_id + '.token';
+			var tokenInput = document.getElementById(inputId);
+
 			if (tokenInput) {
 				tokenInput.value = newToken;
-				tokenInput.dispatchEvent(new Event('change'));
+				tokenInput.type = 'text'; // 临时显示为明文方便查看
+				tokenInput.dispatchEvent(new Event('change', { bubbles: true }));
+				tokenInput.classList.remove('cbi-input-invalid');
+
+				// 选中文本方便复制
+				tokenInput.select();
+
+				// 3秒后恢复为密码类型
+				setTimeout(function () {
+					tokenInput.type = 'password';
+				}, 3000);
+
+				ui.addNotification(null, E('p', _('Token generated and filled. Please save the configuration.')), 'info');
 			} else {
-				// Fallback: set via UCI
+				// 备用方案：直接设置 UCI 并提示
 				uci.set('quick_action', section_id, 'token', newToken);
-				ui.addNotification(null, E('p', _('Token generated: %s. Please save the configuration.').format(newToken)), 'info');
+				ui.addNotification(null, E('p', _('Token generated: %s').format(newToken)), 'info');
 			}
 		};
 
