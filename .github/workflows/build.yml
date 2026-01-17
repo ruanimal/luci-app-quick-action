@@ -34,7 +34,7 @@ jobs:
         id: cache-sdk
         with:
           path: ${{ env.SDK_NAME }}
-          key: ${{ env.SDK_NAME }}-v2
+          key: ${{ env.SDK_NAME }}-v3
 
       - name: Download SDK
         if: steps.cache-sdk.outputs.cache-hit != 'true'
@@ -44,6 +44,8 @@ jobs:
           cd ${{ env.SDK_NAME }}
           # Update feeds to create directory structure
           ./scripts/feeds update -a
+          # Create default config
+          make defconfig
 
       - name: Build IPK
         run: |
@@ -53,9 +55,13 @@ jobs:
           mkdir -p feeds/luci/applications/luci-app-quick-action
           cp -r $GITHUB_WORKSPACE/luci-app-quick-action/* feeds/luci/applications/luci-app-quick-action/
 
-          # Update feeds index
+          # Update feeds index and install package
           ./scripts/feeds update -i
           ./scripts/feeds install -f luci-app-quick-action
+
+          # Ensure .config exists with package enabled
+          echo "CONFIG_PACKAGE_luci-app-quick-action=m" >> .config
+          make defconfig
 
           # Build
           make package/luci-app-quick-action/compile V=s
