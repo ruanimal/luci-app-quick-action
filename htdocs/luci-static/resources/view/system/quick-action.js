@@ -20,17 +20,15 @@ function getApiUsageHtml() {
 		'<p><strong>List Commands: </strong><code>GET /cgi-bin/quick_action?action=list&amp;token=YOUR_TOKEN</code></p>',
 		'<p><strong>Run Command: </strong><code>GET /cgi-bin/quick_action?action=run&amp;cmd=COMMAND_NAME&amp;token=YOUR_TOKEN</code></p>',
 		'<h4>Header Authentication</h4>',
-		'<p><code>X-Quick-Action-Token: YOUR_TOKEN</code></p>',
+		'<p><code>Authorization: Bearer YOUR_TOKEN</code></p>',
 		'<h4>Example (curl)</h4>',
 		'<pre style="background:#f5f5f5;padding:10px;border-radius:4px">',
-		'# List commands',
+		'# With URL parameter',
 		'curl "http://' + host + '/cgi-bin/quick_action?action=list&token=YOUR_TOKEN"',
 		'',
-		'# Run command',
-		'curl "http://' + host + '/cgi-bin/quick_action?action=run&cmd=restart_wan&token=YOUR_TOKEN"',
-		'',
-		'# With header',
-		'curl -H "X-Quick-Action-Token: YOUR_TOKEN" "http://' + host + '/cgi-bin/quick_action?action=list"',
+		'# With Authorization header',
+		'curl -H "Authorization: Bearer YOUR_TOKEN" \\',
+		'     "http://' + host + '/cgi-bin/quick_action?action=run&cmd=restart_wan"',
 		'</pre>'
 	].join('\n');
 }

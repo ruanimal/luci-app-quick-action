@@ -10,7 +10,7 @@
 echo "Content-Type: application/json"
 echo ""
 
-# Get token from URL parameter or Header
+# Get token from URL parameter or Authorization header
 get_token() {
 	local token=""
 
@@ -19,9 +19,10 @@ get_token() {
 		token=$(echo "$QUERY_STRING" | sed -n 's/.*token=\([^&]*\).*/\1/p')
 	fi
 
-	# Try Header if not found in URL
-	if [ -z "$token" ] && [ -n "$HTTP_X_QUICK_ACTION_TOKEN" ]; then
-		token="$HTTP_X_QUICK_ACTION_TOKEN"
+	# Try Authorization header (Bearer token) if not found in URL
+	if [ -z "$token" ] && [ -n "$HTTP_AUTHORIZATION" ]; then
+		# Extract token from "Bearer <token>" format
+		token=$(echo "$HTTP_AUTHORIZATION" | sed -n 's/^Bearer //p')
 	fi
 
 	echo "$token"
