@@ -115,14 +115,19 @@ return view.extend({
 		s.sortable = true;
 		s.nodescriptions = true;
 
-		o = s.option(form.Value, 'name', _('Name'));
-		o.rmempty = false;
-		o.placeholder = 'my_token';
-
 		o = s.option(form.Value, 'token', _('Token'));
 		o.rmempty = false;
 		o.password = true;
 		o.placeholder = _('Auto-generate or enter manually');
+		o.validate = function (section_id, value) {
+			if (!value || value.length === 0)
+				return _('Token is required');
+			if (value.length < 8)
+				return _('Token must be at least 8 characters');
+			if (!/^[a-zA-Z0-9_-]+$/.test(value))
+				return _('Token can only contain letters, numbers, underscores and hyphens');
+			return true;
+		};
 		o.cfgvalue = function (section_id) {
 			return uci.get('quick_action', section_id, 'token') || '';
 		};
@@ -164,6 +169,10 @@ return view.extend({
 		o = s.option(form.Flag, 'enabled', _('Enabled'));
 		o.rmempty = false;
 		o.default = '1';
+
+		o = s.option(form.Value, 'remark', _('Remark'));
+		o.placeholder = _('Optional description');
+		o.rmempty = true;
 
 		o = s.option(form.Value, 'expires', _('Expires (Unix timestamp)'));
 		o.placeholder = '0';
